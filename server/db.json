@@ -1,0 +1,88 @@
+{
+  "users": [
+    {
+      "id": 1780340140013,
+      "name": "Nur Mohammad",
+      "email": "nur008.cse.diu@gmail.com",
+      "password": "860051"
+    }
+  ],
+  "orders": [
+    {
+      "id": 1780340282678,
+      "userId": 1780340140013,
+      "items": [
+        {
+          "id": 2,
+          "name": "Wireless Earbuds",
+          "price": 2500,
+          "description": "High quality sound earbuds",
+          "image": "https://via.placeholder.com/150",
+          "category": "Electronics",
+          "quantity": 1
+        }
+      ],
+      "total": 2500,
+      "date": "2026-06-01T18:58:02.678Z"
+    },
+    {
+      "id": 1780340374243,
+      "userId": 1780340140013,
+      "items": [
+        {
+          "id": 4,
+          "name": "Leather Wallet",
+          "price": 800,
+          "description": "Pure leather wallet for men",
+          "image": "https://via.placeholder.com/150",
+          "category": "Fashion",
+          "quantity": 1
+        }
+      ],
+      "total": 800,
+      "date": "2026-06-01T18:59:34.243Z"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Smart Watch",
+      "price": 1200,
+      "description": "Best budget smart watch",
+      "image": "https://via.placeholder.com/150",
+      "category": "Electronics"
+    },
+    {
+      "id": 2,
+      "name": "Wireless Earbuds",
+      "price": 2500,
+      "description": "High quality sound earbuds",
+      "image": "https://via.placeholder.com/150",
+      "category": "Electronics"
+    },
+    {
+      "id": 3,
+      "name": "Cotton T-Shirt",
+      "price": 450,
+      "description": "Comfortable cotton t-shirt",
+      "image": "https://via.placeholder.com/150",
+      "category": "Fashion"
+    },
+    {
+      "id": 4,
+      "name": "Leather Wallet",
+      "price": 800,
+      "description": "Pure leather wallet for men",
+      "image": "https://via.placeholder.com/150",
+      "category": "Fashion"
+    },
+    {
+      "id": 5,
+      "name": "Running Shoes",
+      "price": 3200,
+      "description": "Lightweight running shoes",
+      "image": "https://via.placeholder.com/150",
+      "category": "Sports"
+    }
+  ]
+}
