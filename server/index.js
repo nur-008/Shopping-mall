@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -5,48 +6,49 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 5000;
-const SECRET_KEY = 'nr_shopping_secret';
+const PORT = process.env.PORT || 5000;
+const SECRET_KEY = process.env.JWT_SECRET || 'nr_shopping_secret';
+const dbPath = path.join(__dirname, 'db.json');
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Dummy Database
-const dbPath = path.join(__dirname, 'db.json');
-if (!fs.existsSync(dbPath)) {
-    const initialDb = {
-        users: [],
-        orders: [],
-        products: [
-            { id: 1, name: "Smart Watch", price: 1200, description: "Best budget smart watch", image: "https://via.placeholder.com/150", category: "Electronics" },
-            { id: 2, name: "Wireless Earbuds", price: 2500, description: "High quality sound earbuds", image: "https://via.placeholder.com/150", category: "Electronics" },
-            { id: 3, name: "Cotton T-Shirt", price: 450, description: "Comfortable cotton t-shirt", image: "https://via.placeholder.com/150", category: "Fashion" },
-            { id: 4, name: "Leather Wallet", price: 800, description: "Pure leather wallet for men", image: "https://via.placeholder.com/150", category: "Fashion" },
-            { id: 5, name: "Running Shoes", price: 3200, description: "Lightweight running shoes", image: "https://via.placeholder.com/150", category: "Sports" }
-        ]
-    };
-    fs.writeFileSync(dbPath, JSON.stringify(initialDb, null, 2));
-}
+// Helper to read/write DB
+const getDB = () => {
+    if (!fs.existsSync(dbPath)) {
+        const initialDB = { users: [], products: [], orders: [] };
+        fs.writeFileSync(dbPath, JSON.stringify(initialDB, null, 2));
+        return initialDB;
+    }
+    return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+};
 
-const getDb = () => JSON.parse(fs.readFileSync(dbPath));
-const saveDb = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 
 // Auth Routes
 app.post('/api/register', (req, res) => {
     const { name, email, password } = req.body;
-    const db = getDb();
-    if (db.users.find(u => u.email === email)) return res.status(400).json({ message: "User already exists" });
+    const db = getDB();
+    
+    if (db.users.find(u => u.email === email)) {
+        return res.status(400).json({ message: "User already exists" });
+    }
+
     const newUser = { id: Date.now(), name, email, password };
     db.users.push(newUser);
-    saveDb(db);
+    saveDB(db);
+    
     res.json({ message: "Registration successful" });
 });
 
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
-    const db = getDb();
+    const db = getDB();
     const user = db.users.find(u => u.email === email && u.password === password);
+    
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    
     const token = jwt.sign({ id: user.id, name: user.name }, SECRET_KEY, { expiresIn: '1h' });
     res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
 });
@@ -54,19 +56,121 @@ app.post('/api/login', (req, res) => {
 // Product Routes
 app.get('/api/products', (req, res) => {
     const { q } = req.query;
-    const db = getDb();
+    const db = getDB();
+    let products = db.products;
+    
     if (q) {
-        const filtered = db.products.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
-        return res.json(filtered);
+        const query = q.toLowerCase();
+        const keywords = query.split(/\s+/).filter(k => k.length > 0);
+        
+        products = products.filter(p => {
+            const name = (p.name || '').toLowerCase();
+            const desc = (p.description || '').toLowerCase();
+            return keywords.every(kw => name.includes(kw) || desc.includes(kw));
+        });
     }
-    res.json(db.products);
+    
+    res.json(products);
 });
 
 app.get('/api/products/:id', (req, res) => {
-    const db = getDb();
-    const product = db.products.find(p => p.id == req.params.id);
+    const db = getDB();
+    const productId = req.params.id;
+    const product = db.products.find(p => String(p.id) === String(productId));
+    
     if (!product) return res.status(404).json({ message: "Product not found" });
-    res.json(product);
+    
+    const totalSold = db.orders.reduce((sum, order) => {
+        const item = order.items.find(i => String(i.id) === String(productId));
+        return sum + (item ? (Number(item.quantity) || 0) : 0);
+    }, 0);
+    
+    res.json({ ...product, totalSold });
+});
+
+app.post('/api/products', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        const { name, price, description, image, categories } = req.body;
+        const db = getDB();
+        
+        const newProduct = {
+            id: Date.now(),
+            name,
+            price: Number(price),
+            description,
+            image,
+            categories: categories || [],
+            user_id: decoded.id
+        };
+        
+        db.products.push(newProduct);
+        saveDB(db);
+        res.json({ message: "Product added successfully", product: newProduct });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to add product" });
+    }
+});
+
+app.put('/api/products/:id', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        const { name, price, description, image, categories } = req.body;
+        const db = getDB();
+        
+        const index = db.products.findIndex(p => String(p.id) === String(req.params.id));
+        if (index === -1) return res.status(404).json({ message: "Product not found" });
+        
+        if (String(db.products[index].user_id) !== String(decoded.id)) {
+            return res.status(403).json({ message: "You don't have permission to edit this product" });
+        }
+
+        db.products[index] = { 
+            ...db.products[index],
+            name, 
+            price: Number(price), 
+            description, 
+            image, 
+            categories: categories || []
+        };
+
+        saveDB(db);
+        res.json({ message: "Product updated successfully" });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to update product" });
+    }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        const db = getDB();
+        
+        const index = db.products.findIndex(p => String(p.id) === String(req.params.id));
+        if (index === -1) return res.status(404).json({ message: "Product not found" });
+        
+        if (String(db.products[index].user_id) !== String(decoded.id)) {
+            return res.status(403).json({ message: "You don't have permission to delete this product" });
+        }
+
+        db.products.splice(index, 1);
+        saveDB(db);
+        res.json({ message: "Product deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ message: "Failed to delete product" });
+    }
 });
 
 // Order Routes
@@ -74,13 +178,25 @@ app.post('/api/orders', (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
     const token = authHeader.split(' ')[1];
+    
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
-        const { items, total } = req.body;
-        const db = getDb();
-        const newOrder = { id: Date.now(), userId: decoded.id, items, total, date: new Date().toISOString() };
+        const { items, subtotal, deliveryCharge, total, customerInfo } = req.body;
+        const db = getDB();
+        
+        const newOrder = { 
+            id: Date.now(),
+            user_id: decoded.id, 
+            items, 
+            subtotal,
+            deliveryCharge,
+            total,
+            customerInfo,
+            date: new Date().toISOString() 
+        };
+        
         db.orders.push(newOrder);
-        saveDb(db);
+        saveDB(db);
         res.json({ message: "Order placed successfully", order: newOrder });
     } catch (err) {
         res.status(401).json({ message: "Invalid token" });
@@ -91,14 +207,50 @@ app.get('/api/orders', (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
     const token = authHeader.split(' ')[1];
+    
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
-        const db = getDb();
-        const userOrders = db.orders.filter(o => o.userId === decoded.id);
-        res.json(userOrders);
+        const db = getDB();
+        const orders = db.orders.filter(o => String(o.user_id) === String(decoded.id));
+        res.json(orders);
     } catch (err) {
         res.status(401).json({ message: "Invalid token" });
     }
 });
 
+app.get('/api/admin/orders', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
+    const token = authHeader.split(' ')[1];
+    
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        const db = getDB();
+        
+        const adminOrders = db.orders.map(order => {
+            const myItems = order.items.filter(item => {
+                const product = db.products.find(p => String(p.id) === String(item.id));
+                return product && String(product.user_id) === String(decoded.id);
+            });
+
+            if (myItems.length > 0) {
+                return {
+                    ...order,
+                    items: myItems,
+                    adminTotal: myItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                };
+            }
+            return null;
+        }).filter(Boolean);
+        
+        res.json(adminOrders);
+    } catch (err) {
+        res.status(401).json({ message: "Invalid token" });
+    }
+});
+
+app.get('/', (req, res) => res.send("NR Shopping Local API is running..."));
+
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+module.exports = app;

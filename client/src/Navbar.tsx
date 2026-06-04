@@ -32,7 +32,19 @@ const Navbar = () => {
                         Cart <span>({cart.length})</span>
                     </Link>
                     {user ? (
-                        <div className="user-menu">
+                        <div className="user-menu" style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                            <Link to="/profile" style={{display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', color: 'inherit'}}>
+                                <div style={{width: '30px', height: '30px', background: '#f85606', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
+                                    {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{fontWeight: '500'}}>Profile</span>
+                            </Link>
+                            {(user.email === 'admin@nr.com' || user.email === 'nur008.cse.diu@gmail.com') && (
+                                <>
+                                    <Link to="/admin/orders" style={{color: '#f85606', fontWeight: 'bold'}}>Sales Dashboard</Link>
+                                    <Link to="/add-product">Add Product</Link>
+                                </>
+                            )}
                             <Link to="/orders">My Orders</Link>
                             <button onClick={logout}>Logout</button>
                         </div>

@@ -5,19 +5,25 @@
       "name": "Nur Mohammad",
       "email": "nur008.cse.diu@gmail.com",
       "password": "860051"
+    },
+    {
+      "id": 1780590903727,
+      "name": "Rijon",
+      "email": "nur242-15-008@diu.edu.bd",
+      "password": "123456"
     }
   ],
   "orders": [
     {
       "id": 1780340282678,
-      "userId": 1780340140013,
+      "user_id": 1780340140013,
       "items": [
         {
           "id": 2,
           "name": "Wireless Earbuds",
           "price": 2500,
           "description": "High quality sound earbuds",
-          "image": "https://via.placeholder.com/150",
+          "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
           "category": "Electronics",
           "quantity": 1
         }
@@ -27,14 +33,14 @@
     },
     {
       "id": 1780340374243,
-      "userId": 1780340140013,
+      "user_id": 1780340140013,
       "items": [
         {
           "id": 4,
           "name": "Leather Wallet",
           "price": 800,
           "description": "Pure leather wallet for men",
-          "image": "https://via.placeholder.com/150",
+          "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
           "category": "Fashion",
           "quantity": 1
         }
@@ -49,40 +55,50 @@
       "name": "Smart Watch",
       "price": 1200,
       "description": "Best budget smart watch",
-      "image": "https://via.placeholder.com/150",
-      "category": "Electronics"
+      "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
+      "category": "Electronics",
+      "user_id": 1780340140013,
+      "categories": ["Electronics"]
     },
     {
       "id": 2,
       "name": "Wireless Earbuds",
       "price": 2500,
       "description": "High quality sound earbuds",
-      "image": "https://via.placeholder.com/150",
-      "category": "Electronics"
+      "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
+      "category": "Electronics",
+      "user_id": 1780340140013,
+      "categories": ["Electronics"]
     },
     {
       "id": 3,
       "name": "Cotton T-Shirt",
       "price": 450,
       "description": "Comfortable cotton t-shirt",
-      "image": "https://via.placeholder.com/150",
-      "category": "Fashion"
+      "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
+      "category": "Fashion",
+      "user_id": 1780340140013,
+      "categories": ["Fashion"]
     },
     {
       "id": 4,
       "name": "Leather Wallet",
       "price": 800,
       "description": "Pure leather wallet for men",
-      "image": "https://via.placeholder.com/150",
-      "category": "Fashion"
+      "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
+      "category": "Fashion",
+      "user_id": 1780340140013,
+      "categories": ["Fashion"]
     },
     {
       "id": 5,
       "name": "Running Shoes",
       "price": 3200,
       "description": "Lightweight running shoes",
-      "image": "https://via.placeholder.com/150",
-      "category": "Sports"
+      "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400",
+      "category": "Sports",
+      "user_id": 1780340140013,
+      "categories": ["Sports"]
     }
   ]
 }
