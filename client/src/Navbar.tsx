@@ -34,8 +34,12 @@ const Navbar = () => {
                     {user ? (
                         <div className="user-menu" style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
                             <Link to="/profile" style={{display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', color: 'inherit'}}>
-                                <div style={{width: '30px', height: '30px', background: '#f85606', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
-                                    {user.name.charAt(0).toUpperCase()}
+                                <div style={{width: '30px', height: '30px', background: '#f85606', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', overflow: 'hidden'}}>
+                                    {user.image ? (
+                                        <img src={user.image} alt="Profile" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                                    ) : (
+                                        user.name.charAt(0).toUpperCase()
+                                    )}
                                 </div>
                                 <span style={{fontWeight: '500'}}>Profile</span>
                             </Link>

@@ -5,7 +5,7 @@ import { AppProvider, useCart, useAuth } from './AppContext';
 import Navbar from './Navbar';
 import './index.css';
 
-const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://nr-shopping-api.vercel.app/api';
+const API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname) ? 'http://localhost:5000/api' : 'https://nr-shopping-api.vercel.app/api';
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1000';
 
@@ -792,8 +792,19 @@ const ProductDetail = () => {
 };
 
 const Profile = () => {
-    const { user, token } = useAuth();
+    const { user, token, updateUser } = useAuth();
     const [orderCount, setOrderCount] = useState(0);
+    const [editMode, setEditMode] = useState(false);
+    const [newName, setNewName] = useState(user?.name || '');
+    const [newImage, setNewImage] = useState(user?.image || '');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            setNewName(user.name);
+            setNewImage(user.image || '');
+        }
+    }, [user]);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -809,16 +820,71 @@ const Profile = () => {
         if (token) fetchOrders();
     }, [token]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.put(`${API_URL}/profile`, {
+                name: newName,
+                image: newImage
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            updateUser(res.data.user);
+            setEditMode(false);
+            alert("Profile updated successfully!");
+        } catch (err) {
+            alert("Failed to update profile");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (!user) return <div className="container" style={{padding: '50px', textAlign: 'center'}}>Please login to view your profile.</div>;
 
     return (
         <div className="container" style={{marginTop: '30px'}}>
             <div className="form-container" style={{maxWidth: '600px', background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}>
                 <div style={{textAlign: 'center', marginBottom: '30px'}}>
-                    <div style={{width: '100px', height: '100px', background: '#f85606', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', margin: '0 auto 15px'}}>
-                        {user.name.charAt(0).toUpperCase()}
+                    <div style={{position: 'relative', width: '120px', height: '120px', margin: '0 auto 15px'}}>
+                        <div style={{width: '120px', height: '120px', background: '#f85606', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', overflow: 'hidden'}}>
+                            {newImage || user.image ? (
+                                <img src={newImage || user.image} alt="Profile" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            ) : (
+                                user.name.charAt(0).toUpperCase()
+                            )}
+                        </div>
+                        {editMode && (
+                            <label style={{position: 'absolute', bottom: '0', right: '0', background: 'white', borderRadius: '50%', padding: '8px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', display: 'flex'}}>
+                                <span style={{fontSize: '12px'}}>📷</span>
+                                <input type="file" accept="image/*" style={{display: 'none'}} onChange={handleFileChange} />
+                            </label>
+                        )}
                     </div>
-                    <h2 style={{margin: '0'}}>{user.name}</h2>
+                    
+                    {editMode ? (
+                        <div style={{marginBottom: '15px'}}>
+                            <input 
+                                type="text" 
+                                value={newName} 
+                                onChange={(e) => setNewName(e.target.value)}
+                                style={{padding: '8px', width: '100%', borderRadius: '4px', border: '1px solid #ddd', fontSize: '18px', textAlign: 'center'}}
+                                placeholder="Enter your name"
+                            />
+                        </div>
+                    ) : (
+                        <h2 style={{margin: '0'}}>{user.name}</h2>
+                    )}
                     <p style={{color: '#666'}}>{user.email}</p>
                 </div>
                 
@@ -837,11 +903,32 @@ const Profile = () => {
                     </div>
                 </div>
 
-                <div style={{marginTop: '30px', display: 'flex', gap: '10px'}}>
-                    <Link to="/orders" className="btn" style={{flex: 1, textAlign: 'center', textDecoration: 'none'}}>View My Orders</Link>
-                    {(user.email === 'admin@nr.com' || user.email === 'nur008.cse.diu@gmail.com') && (
-                        <Link to="/admin/orders" className="btn" style={{flex: 1, textAlign: 'center', textDecoration: 'none', background: '#666'}}>Sales Dashboard</Link>
+                <div style={{marginTop: '30px', display: 'flex', gap: '10px', flexDirection: 'column'}}>
+                    {editMode ? (
+                        <div style={{display: 'flex', gap: '10px'}}>
+                            <button className="btn" onClick={handleSave} disabled={loading} style={{flex: 1}}>
+                                {loading ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button className="btn" onClick={() => {
+                                setEditMode(false);
+                                setNewName(user.name);
+                                setNewImage(user.image);
+                            }} style={{flex: 1, background: '#666'}}>
+                                Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <button className="btn" onClick={() => setEditMode(true)} style={{width: '100%', background: '#666', marginBottom: '10px'}}>
+                            Edit Profile
+                        </button>
                     )}
+                    
+                    <div style={{display: 'flex', gap: '10px'}}>
+                        <Link to="/orders" className="btn" style={{flex: 1, textAlign: 'center', textDecoration: 'none'}}>View My Orders</Link>
+                        {(user.email === 'admin@nr.com' || user.email === 'nur008.cse.diu@gmail.com') && (
+                            <Link to="/admin/orders" className="btn" style={{flex: 1, textAlign: 'center', textDecoration: 'none', background: '#333'}}>Sales Dashboard</Link>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

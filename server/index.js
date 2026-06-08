@@ -11,8 +11,8 @@ const SECRET_KEY = process.env.JWT_SECRET || 'nr_shopping_secret';
 const dbPath = path.join(__dirname, 'db.json');
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Helper to read/write DB
 const getDB = () => {
@@ -50,7 +50,7 @@ app.post('/api/login', (req, res) => {
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
     
     const token = jwt.sign({ id: user.id, name: user.name }, SECRET_KEY, { expiresIn: '1h' });
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, image: user.image } });
 });
 
 // Product Routes
@@ -245,6 +245,41 @@ app.get('/api/admin/orders', (req, res) => {
         
         res.json(adminOrders);
     } catch (err) {
+        res.status(401).json({ message: "Invalid token" });
+    }
+});
+
+app.put('/api/profile', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        const { name, image } = req.body;
+        const db = getDB();
+        
+        const userIndex = db.users.findIndex(u => String(u.id) === String(decoded.id));
+        if (userIndex === -1) {
+            console.log("User not found for ID:", decoded.id);
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        db.users[userIndex].name = name || db.users[userIndex].name;
+        db.users[userIndex].image = image || db.users[userIndex].image;
+
+        saveDB(db);
+        
+        const updatedUser = { 
+            id: db.users[userIndex].id, 
+            name: db.users[userIndex].name, 
+            email: db.users[userIndex].email,
+            image: db.users[userIndex].image
+        };
+        
+        res.json({ message: "Profile updated successfully", user: updatedUser });
+    } catch (err) {
+        console.error("Profile update error:", err);
         res.status(401).json({ message: "Invalid token" });
     }
 });

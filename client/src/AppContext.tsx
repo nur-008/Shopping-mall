@@ -38,6 +38,11 @@ export const AppProvider = ({ children }) => {
         localStorage.removeItem('token');
     };
 
+    const updateUser = (userData) => {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+    };
+
     const addToCart = (product) => {
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
@@ -65,7 +70,7 @@ export const AppProvider = ({ children }) => {
     const clearCart = () => setCart([]);
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout }}>
+        <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>
             <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
                 {children}
             </CartContext.Provider>
