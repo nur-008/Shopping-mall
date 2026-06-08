@@ -472,8 +472,8 @@ const AddProduct = () => {
             });
             alert("Product added successfully!");
             navigate('/');
-        } catch (err) {
-            alert("Failed to add product");
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to add product");
         }
     };
 
