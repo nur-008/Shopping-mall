@@ -187,6 +187,8 @@ const Cart = () => {
     const [address, setAddress] = useState('');
     const [area, setArea] = useState('Inside Dhaka');
     const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
+    const [bkashNumber, setBkashNumber] = useState('');
+    const [transactionId, setTransactionId] = useState('');
 
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const deliveryCharge = area === 'Inside DIU' ? 0 : (area === 'Inside Dhaka' ? 50 : 150);
@@ -211,6 +213,13 @@ const Cart = () => {
             return;
         }
 
+        if (paymentMethod === 'bKash') {
+            if (!bkashNumber || !transactionId) {
+                alert("Please provide your bKash number and Transaction ID");
+                return;
+            }
+        }
+
         try {
             const orderData = { 
                 items: cart, 
@@ -222,7 +231,9 @@ const Cart = () => {
                     phone,
                     address,
                     area,
-                    paymentMethod
+                    paymentMethod,
+                    bkashNumber: paymentMethod === 'bKash' ? bkashNumber : undefined,
+                    transactionId: paymentMethod === 'bKash' ? transactionId : undefined
                 }
             };
             await axios.post(`${API_URL}/orders`, orderData, {
@@ -231,8 +242,8 @@ const Cart = () => {
             alert("Order placed successfully!");
             clearCart();
             navigate('/orders');
-        } catch (err) {
-            alert("Checkout failed");
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Checkout failed");
         }
     };
 
@@ -244,9 +255,19 @@ const Cart = () => {
                     <div>
                         {cart.map(item => (
                             <div key={item.id} className="cart-item" style={{borderRadius: '8px', border: '1px solid #eee'}}>
-                                <div>
-                                    <h4>{item.name}</h4>
-                                    <p>৳{item.price}</p>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                                    <img 
+                                        src={item.image || DEFAULT_IMAGE} 
+                                        alt={item.name} 
+                                        style={{width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px'}}
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = DEFAULT_IMAGE;
+                                        }}
+                                    />
+                                    <div>
+                                        <h4 style={{margin: '0 0 5px 0'}}>{item.name}</h4>
+                                        <p style={{margin: 0}}>৳{item.price}</p>
+                                    </div>
                                 </div>
                                 <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                                     <button className="qty-btn" onClick={() => updateQuantity(item.id, -1)}>-</button>
@@ -293,12 +314,47 @@ const Cart = () => {
                             <label>Payment Method</label>
                             <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{width: '100%', padding: '8px', border: '1px solid #ddd'}}>
                                 <option value="Cash on Delivery">Cash on Delivery</option>
-                                <option value="bKash" disabled style={{color: '#999'}}>bKash (Coming Soon)</option>
+                                <option value="bKash">bKash (Send Money)</option>
                                 <option value="Nagad" disabled style={{color: '#999'}}>Nagad (Coming Soon)</option>
                                 <option value="Rocket" disabled style={{color: '#999'}}>Rocket (Coming Soon)</option>
                                 <option value="Card" disabled style={{color: '#999'}}>Credit/Debit Card (Coming Soon)</option>
                             </select>
                         </div>
+
+                        {paymentMethod === 'bKash' && (
+                            <div style={{background: '#fef1f6', padding: '15px', borderRadius: '8px', border: '1px solid #f8d7da', marginTop: '15px', marginBottom: '15px'}}>
+                                <p style={{fontSize: '14px', margin: '0 0 10px 0', color: '#d10056', fontWeight: 'bold'}}>
+                                    Instructions:
+                                </p>
+                                <p style={{fontSize: '13px', margin: '0 0 10px 0'}}>
+                                    Please Send Money <strong>৳{total}</strong> to this bKash Number:
+                                </p>
+                                <h3 style={{color: '#d10056', margin: '10px 0', textAlign: 'center'}}>01615405325</h3>
+                                <div className="form-group" style={{marginTop: '15px'}}>
+                                    <label style={{fontSize: '13px'}}>Your bKash Number</label>
+                                    <input 
+                                        type="tel" 
+                                        value={bkashNumber} 
+                                        onChange={(e) => setBkashNumber(e.target.value)} 
+                                        placeholder="01xxxxxxxxx" 
+                                        required 
+                                        style={{border: '1px solid #f85606'}}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label style={{fontSize: '13px'}}>Transaction ID (TrxID)</label>
+                                    <input 
+                                        type="text" 
+                                        value={transactionId} 
+                                        onChange={(e) => setTransactionId(e.target.value)} 
+                                        placeholder="8N7X..." 
+                                        required 
+                                        style={{border: '1px solid #f85606'}}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <button type="submit" className="btn" style={{width: '100%', marginTop: '10px'}}>Confirm Order</button>
                     </form>
                 </div>
@@ -333,12 +389,22 @@ const Orders = () => {
                         </div>
                         
                         <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '15px'}}>
-                            <div style={{flex: '1', minWidth: '200px'}}>
+                            <div style={{flex: '2', minWidth: '300px'}}>
                                 <h4 style={{marginBottom: '10px', color: '#666'}}>Items</h4>
                                 {order.items.map((item: any) => (
-                                    <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px'}}>
-                                        <span>{item.name} × {item.quantity}</span>
-                                        <span>৳{item.price * item.quantity}</span>
+                                    <div key={item.id} style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px'}}>
+                                        <img 
+                                            src={item.image || DEFAULT_IMAGE} 
+                                            alt={item.name} 
+                                            style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px'}}
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = DEFAULT_IMAGE;
+                                            }}
+                                        />
+                                        <div style={{flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: '14px'}}>
+                                            <span>{item.name} × {item.quantity}</span>
+                                            <span>৳{item.price * item.quantity}</span>
+                                        </div>
                                     </div>
                                 ))}
                                 <div style={{textAlign: 'right', borderTop: '1px solid #f0f0f0', paddingTop: '5px', marginTop: '5px'}}>
@@ -349,12 +415,18 @@ const Orders = () => {
                             </div>
                             
                             {order.customerInfo && (
-                                <div style={{flex: '1', minWidth: '200px', paddingLeft: '20px', borderLeft: '1px solid #f0f0f0'}}>
+                                <div style={{flex: '1', minWidth: '250px', paddingLeft: '20px', borderLeft: '1px solid #f0f0f0'}}>
                                     <h4 style={{marginBottom: '10px', color: '#666'}}>Delivery Details</h4>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Name:</strong> {order.customerInfo.name}</p>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Phone:</strong> {order.customerInfo.phone}</p>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Address:</strong> {order.customerInfo.address}</p>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Method:</strong> {order.customerInfo.paymentMethod}</p>
+                                    {order.customerInfo.paymentMethod === 'bKash' && (
+                                        <div style={{marginTop: '10px', padding: '10px', background: '#fef1f6', borderRadius: '4px', border: '1px solid #f8d7da'}}>
+                                            <p style={{fontSize: '12px', margin: '2px 0', color: '#d10056'}}><strong>bKash Number:</strong> {order.customerInfo.bkashNumber}</p>
+                                            <p style={{fontSize: '12px', margin: '2px 0', color: '#d10056'}}><strong>TrxID:</strong> {order.customerInfo.transactionId}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -396,12 +468,22 @@ const AdminOrders = () => {
                         </div>
                         
                         <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '15px'}}>
-                            <div style={{flex: '1', minWidth: '200px'}}>
+                            <div style={{flex: '2', minWidth: '300px'}}>
                                 <h4 style={{marginBottom: '10px', color: '#666'}}>Your Sold Items</h4>
                                 {order.items.map((item: any) => (
-                                    <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '5px'}}>
-                                        <span>{item.name} × {item.quantity}</span>
-                                        <span>৳{item.price * item.quantity}</span>
+                                    <div key={item.id} style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px'}}>
+                                        <img 
+                                            src={item.image || DEFAULT_IMAGE} 
+                                            alt={item.name} 
+                                            style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px'}}
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = DEFAULT_IMAGE;
+                                            }}
+                                        />
+                                        <div style={{flex: 1, display: 'flex', justifyContent: 'space-between', fontSize: '14px'}}>
+                                            <span>{item.name} × {item.quantity}</span>
+                                            <span>৳{item.price * item.quantity}</span>
+                                        </div>
                                     </div>
                                 ))}
                                 <div style={{textAlign: 'right', borderTop: '1px solid #f0f0f0', paddingTop: '5px', marginTop: '5px'}}>
@@ -410,12 +492,18 @@ const AdminOrders = () => {
                             </div>
                             
                             {order.customerInfo && (
-                                <div style={{flex: '1', minWidth: '200px', paddingLeft: '20px', borderLeft: '1px solid #f0f0f0'}}>
+                                <div style={{flex: '1', minWidth: '250px', paddingLeft: '20px', borderLeft: '1px solid #f0f0f0'}}>
                                     <h4 style={{marginBottom: '10px', color: '#666'}}>Customer Details</h4>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Name:</strong> {order.customerInfo.name}</p>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Phone:</strong> {order.customerInfo.phone}</p>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Address:</strong> {order.customerInfo.address}</p>
                                     <p style={{fontSize: '14px', margin: '3px 0'}}><strong>Payment:</strong> {order.customerInfo.paymentMethod}</p>
+                                    {order.customerInfo.paymentMethod === 'bKash' && (
+                                        <div style={{marginTop: '10px', padding: '10px', background: '#fef1f6', borderRadius: '4px', border: '1px solid #f8d7da'}}>
+                                            <p style={{fontSize: '12px', margin: '2px 0', color: '#d10056'}}><strong>bKash Number:</strong> {order.customerInfo.bkashNumber}</p>
+                                            <p style={{fontSize: '12px', margin: '2px 0', color: '#d10056'}}><strong>TrxID:</strong> {order.customerInfo.transactionId}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

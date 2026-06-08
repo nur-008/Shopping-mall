@@ -105,6 +105,12 @@ app.post('/api/products', async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
+        const userId = Number(decoded.id);
+
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: "Invalid session. Please logout and login again." });
+        }
+
         const { name, price, description, image, categories } = req.body;
         
         const newProduct = {
@@ -114,7 +120,7 @@ app.post('/api/products', async (req, res) => {
             description,
             image,
             categories: categories || [],
-            user_id: decoded.id
+            user_id: userId
         };
         
         const { error } = await supabase.from('products').insert([newProduct]);
@@ -209,11 +215,17 @@ app.post('/api/orders', async (req, res) => {
     
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
+        const userId = Number(decoded.id);
+
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: "Invalid session. Please logout and login again." });
+        }
+
         const { items, subtotal, deliveryCharge, total, customerInfo } = req.body;
         
         const newOrder = { 
             id: Date.now(),
-            user_id: decoded.id, 
+            user_id: userId, 
             items, 
             subtotal,
             deliveryCharge,
@@ -223,11 +235,15 @@ app.post('/api/orders', async (req, res) => {
         };
         
         const { error } = await supabase.from('orders').insert([newOrder]);
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Order Error:", error);
+            return res.status(500).json({ message: error.message });
+        }
 
         res.json({ message: "Order placed successfully", order: newOrder });
     } catch (err) {
-        res.status(401).json({ message: "Invalid token" });
+        console.error("Order Server Error:", err);
+        res.status(500).json({ message: err.message || "Checkout failed" });
     }
 });
 
